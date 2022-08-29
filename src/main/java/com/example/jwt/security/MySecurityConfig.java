@@ -13,6 +13,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.SecurityFilterChain;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +21,7 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class MySecurityConfig {
-
+//  creating our custom users using spring security authentication manager
 	@Bean
 	public InMemoryUserDetailsManager configAuthentication () {
 		// list of users
@@ -33,17 +34,17 @@ public class MySecurityConfig {
 		List<GrantedAuthority> managerAuthority = new ArrayList<>();
 
 		// add authorities to admin
-		adminAuthority.add(new SimpleGrantedAuthority("ADMIN"));
-		adminAuthority.add(new SimpleGrantedAuthority("USER"));
+		adminAuthority.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+		adminAuthority.add(new SimpleGrantedAuthority("ROLE_USER"));
 		// add authorities to user
-		userAuthority.add(new SimpleGrantedAuthority("USER"));
+		userAuthority.add(new SimpleGrantedAuthority("ROLE_USER"));
 		// add authorities to manager
-		managerAuthority.add(new SimpleGrantedAuthority("MANAGER"));
+		managerAuthority.add(new SimpleGrantedAuthority("ROLE_MANAGER"));
 
 		// create users
 		UserDetails admin = new User("ADMIN", "ADMIN", adminAuthority);
 
-		UserDetails user = new User("ANMOL", "ANMOL", userAuthority);
+		UserDetails user = new User("USER", "USER", userAuthority);
 
 		UserDetails manager = new User("MANAGER", "MANAGER", managerAuthority);
 
@@ -56,8 +57,23 @@ public class MySecurityConfig {
 		return new InMemoryUserDetailsManager(userList);
 	}
 
+//  creating a password encoder bean which is necessary otherwise we will get errors
 	@Bean
 	public PasswordEncoder passwordEncoder() {
 		return NoOpPasswordEncoder.getInstance();
+	}
+
+//  creating our custom authorizations using spring security authorization
+	@Bean
+	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+		http.csrf().disable()
+		 .authorizeHttpRequests()
+		 .antMatchers("/admin").hasRole("ADMIN")
+		 .antMatchers("/manager").hasAnyRole("MANAGER","ADMIN")
+		 .antMatchers("/user").hasAnyRole("USER","MANAGER","ADMIN")
+		 .and()
+		 .formLogin()
+		 .permitAll();
+		return http.build();
 	}
 }
